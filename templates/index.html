@@ -222,7 +222,8 @@ document.addEventListener("DOMContentLoaded", function () {
         return id;
     })();
     const userColor = "#" + Math.floor(Math.random() * 16777215).toString(16);
-    const ws = new WebSocket(`ws://${location.host}/ws/edits`);
+    const protocol = location.protocol === "https:" ? "wss://" : "ws://";
+    const ws = new WebSocket(`${protocol}${location.host}/ws/edits`);
     const lockedFields = new Set();
 
     ws.onmessage = (event) => {
