@@ -1,0 +1,40 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>All Users</title>
+  <style>
+    table { border-collapse: collapse; width: 80%; margin: 2rem auto; }
+    th, td { padding: 8px 12px; border: 1px solid #ccc; }
+    th { background-color: #f2f2f2; }
+    button { padding: 4px 10px; }
+    form { display: inline; }
+  </style>
+</head>
+<body>
+  <h1 style="text-align:center;">All Users</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>Email</th>
+        <th>Role</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for username, data in users.items() %}
+      <tr>
+        <td>{{ username }}</td>
+        <td>{{ data.role }}</td>
+        <td>
+          <form action="/admin/delete_user" method="post" onsubmit="return confirm('Delete {{ username }}?');">
+            <input type="hidden" name="username" value="{{ username }}">
+            <button type="submit" style="color:red;">❌ Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>

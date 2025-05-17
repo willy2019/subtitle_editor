@@ -1,0 +1,55 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Blur Save Test</title>
+</head>
+<body>
+    <h2>Subtitle Edit (Test)</h2>
+    <textarea id="subtitle" style="width: 100%; height: 100px;"></textarea>
+    <div id="status" style="margin-top: 10px; font-weight: bold;"></div>
+
+    <script>
+        const textarea = document.getElementById("subtitle");
+        const status = document.getElementById("status");
+
+        textarea.addEventListener("input", () => {
+            console.log("Input event triggered:", textarea.value);
+        });
+
+        textarea.addEventListener("blur", () => {
+            const payload = {
+                index: 0,
+                lang: "en",
+                text: textarea.value
+            };
+            console.log("Blur event - preparing to save:", payload);
+
+            const formData = new FormData();
+            formData.append("index", payload.index);
+            formData.append("lang", payload.lang);
+            formData.append("text", payload.text);
+
+            fetch("/save_edits", {
+                method: "POST",
+                body: formData
+            }).then(res => {
+                if (!res.ok) {
+                    throw new Error("Save failed: " + res.statusText);
+                }
+                return res.json();
+            }).then(data => {
+                console.log("Saved response:", data);
+                status.textContent = "✔ Saved!";
+                status.style.color = "#10b981";
+                setTimeout(() => status.textContent = "", 2000);
+            }).catch(err => {
+                console.error("Save failed:", err);
+                status.textContent = "❌ Save failed!";
+                status.style.color = "#dc2626";
+            });
+        });
+    </script>
+</body>
+</html>

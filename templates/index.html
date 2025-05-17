@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Subtitle Editor</title>
+    <style>
+        body { font-family: sans-serif; margin: 0; display: flex; height: 100vh; }
+        .left { flex: 1; padding: 1em; background: #f3f4f6; }
+        .right { flex: 1.2; padding: 1em; background: #f9fafb; overflow-y: auto; 
+  overflow-y: auto;
+  max-height: 100vh;
+}
+        .segment-grid { display: flex; flex-direction: column; gap: 1em; }
+        .segment-box { display: flex; gap: 1em; }
+        .segment-box.active { border: 2px solid #28a745; box-shadow: 0 0 0 3px #28a74533; background-color: #f0fff4; }
+        .segment-col { flex: 1; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; flex-direction: column; background: #fff; }
+        .segment-col.ar { direction: rtl; text-align: right; }
+        .segment-header { color: white; font-weight: bold; padding: 6px 10px; display: flex; justify-content: space-between; align-items: center; }
+        .segment-body { background: #fff; padding: 10px; font-size: 15px; color: #222; }
+        .timecode { background: #fff; text-align: center; font-size: 14px; padding: 8px 12px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); color: #555; }
+        textarea.edit-field { width: 100%; min-height: 60px; font-size: 14px; padding: 8px; border-radius: 6px; border: 1px solid #ccc; resize: vertical; box-sizing: border-box; }
+        #waveform { margin-top: 1rem; }
+        #zoomControls { margin-top: 0.5em; display: flex; gap: 10px; }
+    </style>
+    <script src="https://unpkg.com/wavesurfer.js@6">
+    function updateCPS(index) {
+        const enText = document.querySelector(`textarea[data-index="${index}"][data-lang="en"]`)?.value || "";
+        const arText = document.querySelector(`textarea[data-index="${index}"][data-lang="ar"]`)?.value || "";
+        const box = document.querySelector(`.segment-box[data-index="${index}"]`);
+        const start = parseFloat(box.dataset.start);
+        const end = parseFloat(box.dataset.end);
+        const duration = Math.max(end - start, 0.001);
+
+        const enCPS = (enText.length / duration).toFixed(1);
+        const arCPS = (arText.length / duration).toFixed(1);
+
+        const enSpan = document.querySelector(`.cps-en[data-index="${index}"]`);
+        const arSpan = document.querySelector(`.cps-ar[data-index="${index}"]`);
+
+        if (enSpan) {
+            enSpan.textContent = `CPS: ${enCPS}`;
+            enSpan.style.color = parseFloat(enCPS) > 15 ? "red" : "#222";
+        }
+        if (arSpan) {
+            arSpan.textContent = `CPS: ${arCPS}`;
+            arSpan.style.color = parseFloat(arCPS) > 15 ? "red" : "#222";
+        }
+    }
+
+    document.querySelectorAll("textarea.edit-field").forEach(textarea => {
+        textarea.addEventListener("input", () => {
+            updateCPS(textarea.dataset.index);
+        });
+        updateCPS(textarea.dataset.index);
+    });
+
+</script>
+    <script src="https://unpkg.com/wavesurfer.js@6/dist/plugin/wavesurfer.regions.min.js">
+    function updateCPS(index) {
+        const enText = document.querySelector(`textarea[data-index="${index}"][data-lang="en"]`)?.value || "";
+        const arText = document.querySelector(`textarea[data-index="${index}"][data-lang="ar"]`)?.value || "";
+        const box = document.querySelector(`.segment-box[data-index="${index}"]`);
+        const start = parseFloat(box.dataset.start);
+        const end = parseFloat(box.dataset.end);
+        const duration = Math.max(end - start, 0.001);
+
+        const enCPS = (enText.length / duration).toFixed(1);
+        const arCPS = (arText.length / duration).toFixed(1);
+
+        const enSpan = document.querySelector(`.cps-en[data-index="${index}"]`);
+        const arSpan = document.querySelector(`.cps-ar[data-index="${index}"]`);
+
+        if (enSpan) {
+            enSpan.textContent = `CPS: ${enCPS}`;
+            enSpan.style.color = parseFloat(enCPS) > 15 ? "red" : "#222";
+        }
+        if (arSpan) {
+            arSpan.textContent = `CPS: ${arCPS}`;
+            arSpan.style.color = parseFloat(arCPS) > 15 ? "red" : "#222";
+        }
+    }
+
+    document.querySelectorAll("textarea.edit-field").forEach(textarea => {
+        textarea.addEventListener("input", () => {
+            updateCPS(textarea.dataset.index);
+        });
+        updateCPS(textarea.dataset.index);
+    });
+
+</script>
+</head>
+<body>
+    <div class="left">
+        <video controls id="videoPlayer" src="/subtitles/{{ project }}/{{ episode }}/{{ episode }}.mp4" style="width: 100%; border-radius: 8px;"></video>
+        <div id="waveform"></div>
+        <div id="zoomControls">
+        <button onclick="zoomIn()">➕ Zoom In</button>
+        <button onclick="zoomOut()">➖ Zoom Out</button>
+    </div>
+    <div id="videoControls" style="margin-top: 1em;">
+        <button onclick="video.currentTime -= 5">⏪ Back 5s</button>
+        <button onclick="video.pause()">⏸ Pause</button>
+        <button onclick="video.play()">▶ Play</button>
+        <button onclick="video.currentTime += 5">⏩ Forward 5s</button>
+        <span style="margin-left: 1em;">Time: <span id="currentTime">0.00</span>s</span>
+    </div>
+            <button onclick="zoomIn()">➕ Zoom In</button>
+            <button onclick="zoomOut()">➖ Zoom Out</button>
+        </div>
+    </div>
+    <div class="right">
+        <h3>{{ project }} — {{ episode }}</h3>
+        
+        <div class="segment-grid" id="segment-grid">
+        {% for pair in paired_lines %}
+        <div class="segment-box segment" data-start="{{ pair.start }}" data-end="{{ pair.end }}" data-index="{{ loop.index0 }}">
+            <div class="segment-col">
+                <div class="segment-header" style="background-color: {{ speaker_colors[pair.en.speaker] }};">
+                    <strong>{{ pair.en.speaker }}</strong>
+                    <span class="cps-display cps-en" data-index="{{ loop.index0 }}" style="margin-left: auto; font-size: 11px;"></span> <span class="live-editor" id="live-{{ loop.index0 }}-en" style="font-size: 12px; color: #fff;"></span>
+                </div>
+                <div class="segment-body">
+                    <textarea class="edit-field" data-index="{{ loop.index0 }}" data-lang="en">{{ pair.en.text }}</textarea>
+                </div>
+            </div>
+            <div class="segment-col ar">
+                <div class="segment-header" style="background-color: {{ speaker_colors[pair.ar.speaker] }};">
+                    <strong>{{ pair.ar.speaker }}</strong>
+                    <span class="cps-display cps-ar" data-index="{{ loop.index0 }}" style="margin-right: auto; font-size: 11px;"></span> <span class="live-editor" id="live-{{ loop.index0 }}-ar" style="font-size: 12px; color: #fff;"></span>
+                </div>
+                <div class="segment-body">
+                    <textarea class="edit-field" data-index="{{ loop.index0 }}" data-lang="ar">{{ pair.ar.text }}</textarea>
+                </div>
+            </div>
+            <div class="timecode">
+                {{ loop.index }}<br />
+                {{ pair.start|timecode }}<br />
+                {{ pair.end|timecode }}
+            </div>
+        </div>
+        {% endfor %}
+        </div>
+    </div>
+
+<script>
+function exportCSV(url) {
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById("exportStatus").textContent = "✔ Exported to " + (data.path || "file");
+            setTimeout(() => {
+                document.getElementById("exportStatus").textContent = "";
+            }, 3000);
+        })
+        .catch(err => {
+            console.error("Export failed", err);
+            document.getElementById("exportStatus").textContent = "❌ Export failed";
+        });
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    const project = "{{ project }}";
+    const episode = "{{ episode }}";
+    window.video = document.getElementById("videoPlayer");
+    let activeBox = null;
+    let seekEndTime = null;
+
+    const waveform = WaveSurfer.create({
+        container: '#waveform',
+        waveColor: 'violet',
+        progressColor: 'purple',
+        height: 80,
+        responsive: true,
+        backend: 'MediaElement',
+        plugins: [WaveSurfer.regions.create()]
+    });
+    waveform.load(video);
+
+    window.zoomIn = function () {
+        waveform.zoom((waveform.params.minPxPerSec || 1) + 10);
+    };
+    window.zoomOut = function () {
+        waveform.zoom(Math.max(1, (waveform.params.minPxPerSec || 1) - 10));
+    };
+
+    document.querySelectorAll(".segment-box").forEach(box => {
+        box.addEventListener("dblclick", () => {
+            const start = parseFloat(box.dataset.start);
+            const end = parseFloat(box.dataset.end);
+            if (!isNaN(start) && !isNaN(end)) {
+                video.currentTime = start;
+                video.play();
+                seekEndTime = end;
+                if (activeBox) activeBox.classList.remove("active");
+                activeBox = box;
+                activeBox.classList.add("active");
+            }
+        });
+    });
+
+    video.addEventListener("timeupdate", () => {
+    const current = video.currentTime;
+    document.querySelectorAll(".segment-box").forEach(box => {
+      const start = parseFloat(box.dataset.start);
+      const end = parseFloat(box.dataset.end);
+      if (current >= start && current < end) {
+        if (!box.classList.contains("active")) {
+          document.querySelectorAll(".segment-box.active").forEach(b => b.classList.remove("active"));
+          box.classList.add("active");
+          box.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }
+    });
+        if (seekEndTime && video.currentTime >= seekEndTime) {
+            video.pause();
+            seekEndTime = null;
+        }
+    });
+
+    const userId = sessionStorage.getItem("subtitleUserId") || (() => {
+        const id = "User " + Math.floor(1000 + Math.random() * 9000);
+        sessionStorage.setItem("subtitleUserId", id);
+        return id;
+    })();
+    const userColor = "#" + Math.floor(Math.random() * 16777215).toString(16);
+    const ws = new WebSocket(`ws://${location.host}/ws/edits`);
+    const lockedFields = new Set();
+
+    ws.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+        const { type, index, lang, text, user } = msg;
+        const key = `${index}-${lang}`;
+        const textarea = document.querySelector(`textarea[data-index="${index}"][data-lang="${lang}"]`);
+        const liveTag = textarea?.closest(".segment-col")?.querySelector(".live-editor");
+
+        if (type === "edit" && textarea && document.activeElement !== textarea) {
+            textarea.value = text;
+            textarea.style.backgroundColor = "#fff3cd";
+            setTimeout(() => { textarea.style.backgroundColor = ""; }, 100);
+        } else if (type === "lock") {
+            if (textarea && document.activeElement !== textarea) {
+                textarea.disabled = true;
+                textarea.style.backgroundColor = "#f8d7da";
+                textarea.placeholder = "Locked by another user...";
+            }
+            if (liveTag) liveTag.textContent = `✏️ ${user}`;
+            lockedFields.add(key);
+        } else if (type === "unlock") {
+            if (textarea) {
+                textarea.disabled = false;
+                textarea.style.backgroundColor = "";
+                textarea.placeholder = "";
+            }
+            if (liveTag) liveTag.textContent = "";
+            lockedFields.delete(key);
+        }
+    };
+
+    document.querySelectorAll("textarea.edit-field").forEach(textarea => {
+        const key = `${textarea.dataset.index}-${textarea.dataset.lang}`;
+        textarea.addEventListener("input", () => {
+            if (lockedFields.has(key)) return;
+            ws.send(JSON.stringify({
+                type: "edit",
+                index: textarea.dataset.index,
+                lang: textarea.dataset.lang,
+                text: textarea.value
+            }));
+            fetch("/save_edits", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: new URLSearchParams({
+                    project: "{{ project }}",
+                    episode: "{{ episode }}",
+                    index: textarea.dataset.index,
+                    lang: textarea.dataset.lang,
+                    text: textarea.value
+                })
+            });
+        });
+
+        textarea.addEventListener("focus", () => {
+            ws.send(JSON.stringify({
+                type: "lock",
+                index: textarea.dataset.index,
+                lang: textarea.dataset.lang,
+                user: userId,
+                color: userColor
+            }));
+        });
+
+        textarea.addEventListener("blur", () => {
+        fetch("/save_edits", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({
+                index: textarea.dataset.index,
+                lang: textarea.dataset.lang,
+                text: textarea.value,
+                project: "{{ project }}",
+                episode: "{{ episode }}"
+            })
+        });
+            ws.send(JSON.stringify({
+                type: "unlock",
+                index: textarea.dataset.index,
+                lang: textarea.dataset.lang
+            }));
+        });
+    });
+});
+
+    function updateCPS(index) {
+        const enText = document.querySelector(`textarea[data-index="${index}"][data-lang="en"]`)?.value || "";
+        const arText = document.querySelector(`textarea[data-index="${index}"][data-lang="ar"]`)?.value || "";
+        const box = document.querySelector(`.segment-box[data-index="${index}"]`);
+        const start = parseFloat(box.dataset.start);
+        const end = parseFloat(box.dataset.end);
+        const duration = Math.max(end - start, 0.001);
+
+        const enCPS = (enText.length / duration).toFixed(1);
+        const arCPS = (arText.length / duration).toFixed(1);
+
+        const enSpan = document.querySelector(`.cps-en[data-index="${index}"]`);
+        const arSpan = document.querySelector(`.cps-ar[data-index="${index}"]`);
+
+        if (enSpan) {
+            enSpan.textContent = `CPS: ${enCPS}`;
+            enSpan.style.color = parseFloat(enCPS) > 15 ? "red" : "#222";
+        }
+        if (arSpan) {
+            arSpan.textContent = `CPS: ${arCPS}`;
+            arSpan.style.color = parseFloat(arCPS) > 15 ? "red" : "#222";
+        }
+    }
+
+    document.querySelectorAll("textarea.edit-field").forEach(textarea => {
+        textarea.addEventListener("input", () => {
+            updateCPS(textarea.dataset.index);
+        });
+        updateCPS(textarea.dataset.index);
+    });
+
+</script>
+</body>
+</html>

@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin Panel</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 2rem;
+      display: flex;
+      gap: 2rem;
+    }
+    .column {
+      flex: 1;
+    }
+    select, button, input {
+      margin-top: 0.5rem;
+      padding: 0.5rem;
+      width: 100%;
+    }
+    h2 {
+      margin-top: 2rem;
+    }
+    .status-message {
+      margin-top: 1rem;
+      font-weight: bold;
+    }
+    .episode-list {
+      margin-top: 1rem;
+      border-top: 1px solid #ccc;
+      padding-top: 1rem;
+    }
+    .episode-item {
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      background: #fafafa;
+    }
+  </style>
+</head>
+<body>
+  
+
+  <div class="column">
+    <h1>Assign Users to Episodes</h1>
+    <form id="assign-form" action="/admin/assign_user" method="post">
+      <label for="project-select">Project Title:</label>
+      <select id="project-select" name="title" required>
+        <option value="">-- Select Project --</option>
+        {% for project in projects %}
+        <option value="{{ project }}">{{ project }}</option>
+        {% endfor %}
+      </select>
+
+      <label for="episode-select">Episode:</label>
+      <select id="episode-select" name="episode" required>
+        <option value="">-- Select Episode --</option>
+      </select>
+
+      <label for="user-select">User to Assign:</label>
+      <select id="user-select" name="username" required>
+        <option value="">-- Select User --</option>
+        {% for user in users %}
+        <option value="{{ user.username }}">{{ user.username }}</option>
+        {% endfor %}
+      </select>
+
+      <button type="submit">Assign</button>
+    </form>
+
+    <div id="assigned-users" style="margin-top: 1rem;"></div>
+    <div class="episode-list" id="episode-list"></div>
+  </div>
+
+  <div class="column">
+    <h2>Create New User</h2>
+    <form method="post" action="/admin/create_user">
+      <input type="text" name="username" placeholder="Email" required>
+      <input type="password" name="password" placeholder="Password" required>
+      <select name="role" required>
+        <option value="editor">Editor</option>
+        <option value="admin">Admin</option>
+      </select>
+      <button type="submit">Create User</button>
+    </form>
+{% if request.session.flash %}
+  <p class="status-message" style="color: {{ 'green' if request.session.flash.type == 'success' else 'red' }};">
+    {{ request.session.flash.message }}
+  </p>
+  {% set _ = request.session.pop('flash') %}
+{% endif %}
+
+    {% if user_created %}
+    <p class="status-message" style="color: green;">✅ User {{ user_created }} created.</p>
+    {% elif user_exists %}
+    <p class="status-message" style="color: red;">❌ User {{ user_exists }} already exists.</p>
+    {% endif %}
+
+    <h2>Create or Extend Project</h2>
+    <form method="post" action="/admin/create_project">
+      <label for="project-picker">Project Title:</label>
+      <select name="project_select" id="project-picker" onchange="clearTextProject(); fetchEpisodeList(this.value)">
+        <option value="">-- Select Existing Project --</option>
+        {% for project in projects %}
+        <option value="{{ project }}">{{ project }}</option>
+        {% endfor %}
+      </select>
+
+      <input type="text" id="project_input" name="project_input" placeholder="Or enter new project name" oninput="clearDropdownProject()">
+      <p id="episode-info" style="color: #555; font-style: italic;"></p>
+
+      <label for="episode_count">Number of Episodes to Create:</label>
+      <input type="number" name="episode_count" id="episode_count" placeholder="e.g. 3" min="1" required>
+
+      <button type="submit">Create/Add Episodes</button>
+    </form>
+
+    {% if project_created %}
+    <p class="status-message" style="color: green;">✅ Project '{{ project_created }}': {{ episode_created }} episode{{ episode_created != 1 and 's' or '' }} created.</p>
+    {% elif project_exists %}
+    <p class="status-message" style="color: red;">❌ Project '{{ project_exists }}' already exists.</p>
+    {% endif %}
+  </div>
+
+  <script>
+    function clearTextProject() {
+      document.getElementById('project_input').value = '';
+    }
+
+    function clearDropdownProject() {
+      document.getElementById('project-picker').selectedIndex = 0;
+      document.getElementById('episode-info').textContent = '';
+      document.getElementById('episode-list').innerHTML = '';
+    }
+
+    function fetchEpisodeList(project) {
+      console.log("fetching", project);
+      const listDiv = document.getElementById('episode-list');
+      const infoBox = document.getElementById('episode-info');
+      listDiv.innerHTML = '';
+      infoBox.textContent = '';
+
+      if (!project) return;
+
+      fetch(`/admin/project_episode_count?project=${encodeURIComponent(project)}`)
+        .then(res => res.json())
+        .then(data => {
+          infoBox.textContent = `🧾 Project '${data.project}' already has ${data.count} episode${data.count !== 1 ? 's' : ''}.`;
+        });
+
+      fetch(`/admin/project_episodes?project=${encodeURIComponent(project)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data.episodes) && data.episodes.length > 0) {
+            listDiv.innerHTML = `<h3>Episodes for '${project}'</h3>`;
+            data.episodes.forEach(ep => {
+              if (typeof ep === 'object' && ep.name) {
+                listDiv.innerHTML += `
+              <div class="episode-item">
+                <strong>${ep.name}</strong>
+                <div style="margin: 4px 0 8px;">
+                  <span style="color: ${ep.has_video ? 'green' : 'gray'}; margin-right: 10px;">
+                    ${ep.has_video ? '✅ Video' : '📄 Video'}
+                  </span>
+                  <span style="color: ${ep.has_csv_en ? 'green' : 'gray'}; margin-right: 10px;">
+                    ${ep.has_csv_en ? '✅ EN CSV' : '📄 EN CSV'}
+                  </span>
+                  <span style="color: ${ep.has_csv_ar ? 'green' : 'gray'};">
+                    ${ep.has_csv_ar ? '✅ AR CSV' : '📄 AR CSV'}
+                  </span>
+                </div>
+                <form action="/admin/upload" method="post" enctype="multipart/form-data">
+                  <input type="hidden" name="project" value="${project}" />
+                  <input type="hidden" name="episode" value="${ep.name}" />
+                  <label>Upload Video:</label>
+                  <input type="file" name="video" accept="video/*" required>
+                  <label>Upload CSV:</label>
+                  <input type="file" name="csv" accept=".csv" required>
+                  <button type="submit">Upload</button>
+                </form>
+    <div style="margin-top: 0.5em;">
+      <strong>Export Final CSVs:</strong><br>
+      <a href="/export?project=${project}&episode=${ep.name}" target="_blank">⬇️ English</a> |
+      <a href="/export_ar?project=${project}&episode=${ep.name}" target="_blank">⬇️ Arabic</a> |
+      <a href="/export_merged?project=${project}&episode=${ep.name}" target="_blank">⬇️ Merged</a>
+    </div>
+              </div>`;
+              } else {
+                console.warn('Invalid episode object:', ep);
+              }
+            });
+          } else {
+            listDiv.innerHTML = `<p>No episodes found in '${project}'.</p>`;
+          }
+        })
+        .catch(err => {
+          console.error('Episode fetch failed:', err);
+          listDiv.innerHTML = `<p style='color:red;'>Failed to load episodes for '${project}'</p>`;
+        });
+    }
+  </script>
+  <script>
+  document.getElementById("project-select").addEventListener("change", function () {
+    const project = this.value;
+    const episodeSelect = document.getElementById("episode-select");
+    episodeSelect.innerHTML = '<option value="">-- Select Episode --</option>';
+
+    if (project) {
+      fetch(`/admin/project_episodes?project=${encodeURIComponent(project)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data.episodes)) {
+            data.episodes.forEach(ep => {
+              if (typeof ep === 'object' && ep.name) {
+                const option = document.createElement("option");
+                option.value = ep.name;
+                option.textContent = ep.name;
+                episodeSelect.appendChild(option);
+              }
+            });
+          }
+        })
+        .catch(err => {
+          console.error("Failed to fetch episodes:", err);
+        });
+    }
+  });
+</script>
+
+<script>
+document.getElementById("episode-select").addEventListener("change", function () {
+  const project = document.getElementById("project-select").value;
+  const episode = this.value;
+  const assignedDiv = document.getElementById("assigned-users");
+
+  assignedDiv.innerHTML = "";
+  if (project && episode) {
+    fetch(`/admin/assigned_users?project=${encodeURIComponent(project)}&episode=${encodeURIComponent(episode)}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.users.length > 0) {
+          const userButtons = data.users.map(user =>
+            `<span style="margin-right: 0.5rem;">
+              ${user} <button data-user="${user}" class="remove-user" style="color:red;">❌</button>
+            </span>`
+          ).join("");
+          assignedDiv.innerHTML = `<strong>Assigned Users:</strong><br>${userButtons}`;
+        } else {
+          assignedDiv.innerHTML = `<strong>No users assigned.</strong>`;
+        }
+      });
+  }
+});
+</script>
+</body>
+</html>

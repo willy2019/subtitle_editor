@@ -1,0 +1,34 @@
+{
+  "admin@example.com": {
+    "password": "admin123",
+    "role": "admin"
+  },
+  "editor@example.com": {
+    "password": "editor123",
+    "role": "editor"
+  },
+  "dana": {
+    "password": "123",
+    "role": "editor"
+  },
+  "Amy": {
+    "password": "123",
+    "role": "editor"
+  },
+  "Maram": {
+    "password": "123",
+    "role": "editor"
+  },
+  "amy": {
+    "password": "123",
+    "role": "editor"
+  },
+  "fadi": {
+    "password": "123",
+    "role": "editor"
+  },
+  "Jad": {
+    "password": "123",
+    "role": "editor"
+  }
+}

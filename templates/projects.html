@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Projects Dashboard</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: "Segoe UI", sans-serif;
+            background: #f4f6f8;
+            color: #333;
+            padding: 2em;
+        }
+        .dashboard {
+            max-width: 900px;
+            margin: auto;
+        }
+        h1 {
+            text-align: center;
+            color: #222;
+        }
+        .user-info {
+            margin: 1em 0;
+            font-size: 16px;
+            color: #444;
+            text-align: center;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+        th, td {
+            padding: 1em;
+            border-bottom: 1px solid #eaeaea;
+            text-align: left;
+        }
+        th {
+            background-color: #f9fafc;
+            font-weight: 600;
+        }
+        tr:hover {
+            background-color: #f1f5f9;
+        }
+        a {
+            color: #0066cc;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .logout {
+            display: block;
+            text-align: right;
+            margin-bottom: 1em;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <a href="/logout" class="logout">🔒 Logout</a>
+        <h1>Projects Dashboard</h1>
+        <div class="user-info">User: <strong>{{ username }}</strong> ({{ role }})</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Episodes</th>
+                    <th>Users</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for project in projects %}
+                <tr>
+                    <td>{{ project.title }}</td>
+                    <td>
+                        <ul>
+                            {% for ep in project.episodes %}
+    <li>
+      <a href="/editor/{{ project.title | urlencode }}/{{ ep.name | urlencode }}">
+        {{ ep.name }}
+      </a>
+      {% if ep.users %}
+        — <span style="font-size: 0.9em;">Users: {{ ep.users | join(', ') }}</span>
+      {% endif %}
+    </li>
+    {% endfor %}
+                        </ul>
+                    </td>
+                    <td>
+                        <ul>
+                            {% for u in project.users %}
+                            <li>{{ u }}</li>
+                            {% endfor %}
+                        </ul>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
